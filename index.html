@@ -456,9 +456,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════
-     SETUP
-═══════════════════════════════════════════════════════ -->
+<!-- SETUP -->
 <div id="screen-setup" class="screen active">
     <div class="app-title">
         <h1>Flip 7</h1>
@@ -485,9 +483,7 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     SCORING
-═══════════════════════════════════════════════════════ -->
+<!-- SCORING -->
 <div id="screen-scoring" class="screen">
     <div class="round-header">
         <div class="round-label">Round</div>
@@ -503,9 +499,7 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     LEADERBOARD
-═══════════════════════════════════════════════════════ -->
+<!-- LEADERBOARD -->
 <div id="screen-leaderboard" class="screen">
     <div class="lb-header">
         <div class="lb-round-label">After Round</div>
@@ -523,9 +517,7 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     WINNER
-═══════════════════════════════════════════════════════ -->
+<!-- WINNER -->
 <div id="screen-winner" class="screen">
     <div class="winner-top">
         <span class="winner-crown">🏆</span>
@@ -544,12 +536,10 @@
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────
-let players    = [];  // { name, total, _gain }
-let round      = 0;
-let roundIn    = [];  // { raw, doubled }
+let players = [];
+let round   = 0;
+let roundIn = [];
 
-// ── Setup ──────────────────────────────────────────────
 const nameInput = document.getElementById('player-input');
 nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
 
@@ -569,10 +559,9 @@ function removePlayer(i) {
 }
 
 function renderSetup() {
-    const chips   = document.getElementById('player-chips');
-    const hint    = document.getElementById('empty-hint');
+    const chips    = document.getElementById('player-chips');
+    const hint     = document.getElementById('empty-hint');
     const startBtn = document.getElementById('start-btn');
-
     chips.innerHTML = players.map((p, i) => `
         <div class="player-chip">
             <div class="chip-num">${i + 1}</div>
@@ -580,9 +569,8 @@ function renderSetup() {
             <button class="chip-remove" onclick="removePlayer(${i})">✕</button>
         </div>
     `).join('');
-
-    hint.style.display    = players.length === 0 ? '' : 'none';
-    startBtn.disabled     = players.length < 2;
+    hint.style.display = players.length === 0 ? '' : 'none';
+    startBtn.disabled  = players.length < 2;
 }
 
 function startGame() {
@@ -592,11 +580,9 @@ function startGame() {
     buildCards();
 }
 
-// ── Scoring ────────────────────────────────────────────
 function buildCards() {
     document.getElementById('round-num').textContent = round;
     roundIn = players.map(() => ({ raw: 0, doubled: false }));
-
     document.getElementById('scoring-cards').innerHTML = players.map((p, i) => `
         <div class="psc" id="psc-${i}">
             <div class="psc-header">
@@ -638,7 +624,7 @@ function toggleX2(i) {
 }
 
 function clearIn(i) {
-    roundIn[i].raw    = 0;
+    roundIn[i].raw     = 0;
     roundIn[i].doubled = false;
     document.getElementById(`psc-${i}`).classList.remove('is-doubled');
     document.getElementById(`x2-${i}`).classList.remove('active');
@@ -648,8 +634,7 @@ function clearIn(i) {
 
 function refreshDisp(i) {
     const { raw, doubled } = roundIn[i];
-    const shown = doubled ? raw * 2 : raw;
-    document.getElementById(`sn-${i}`).textContent = shown;
+    document.getElementById(`sn-${i}`).textContent = doubled ? raw * 2 : raw;
     document.getElementById(`sf-${i}`).textContent =
         (doubled && raw > 0) ? `${raw} × 2` : (doubled ? '× 2 ready' : '');
 }
@@ -660,16 +645,11 @@ function endRound() {
         p._gain  = doubled ? raw * 2 : raw;
         p.total += p._gain;
     });
-
     const sorted = [...players].sort((a, b) => b.total - a.total);
-    if (sorted[0].total >= 200) {
-        showWinner(sorted);
-    } else {
-        showLB(sorted);
-    }
+    if (sorted[0].total >= 200) showWinner(sorted);
+    else showLB(sorted);
 }
 
-// ── Leaderboard ────────────────────────────────────────
 function showLB(sorted) {
     document.getElementById('lb-round-num').textContent = round;
     const medals = ['🥇', '🥈', '🥉'];
@@ -678,9 +658,7 @@ function showLB(sorted) {
             <div class="lb-rank ${i > 2 ? 'num' : ''}">${medals[i] ?? i + 1}</div>
             <div class="lb-info">
                 <div class="lb-name">${esc(p.name)}</div>
-                <div class="lb-bar">
-                    <div class="lb-fill" style="width:${pct(p.total, 200)}%"></div>
-                </div>
+                <div class="lb-bar"><div class="lb-fill" style="width:${pct(p.total,200)}%"></div></div>
             </div>
             <div class="lb-scores">
                 <div class="lb-total">${p.total}</div>
@@ -697,28 +675,21 @@ function nextRound() {
     buildCards();
 }
 
-// ── Winner ─────────────────────────────────────────────
 function showWinner(sorted) {
     const w = sorted[0];
     document.getElementById('winner-name').textContent = w.name;
     document.getElementById('winner-pts').textContent  = `${w.total} points`;
-
     const medals = ['🥇', '🥈', '🥉'];
     document.getElementById('final-standings').innerHTML = sorted.map((p, i) => `
         <div class="lb-entry ${i === 0 ? 'top' : ''}">
             <div class="lb-rank ${i > 2 ? 'num' : ''}">${medals[i] ?? i + 1}</div>
             <div class="lb-info">
                 <div class="lb-name">${esc(p.name)}</div>
-                <div class="lb-bar">
-                    <div class="lb-fill" style="width:${pct(p.total, 200)}%"></div>
-                </div>
+                <div class="lb-bar"><div class="lb-fill" style="width:${pct(p.total,200)}%"></div></div>
             </div>
-            <div class="lb-scores">
-                <div class="lb-total">${p.total}</div>
-            </div>
+            <div class="lb-scores"><div class="lb-total">${p.total}</div></div>
         </div>
     `).join('');
-
     go('winner');
     vibe([100, 50, 100, 50, 250]);
 }
@@ -737,7 +708,6 @@ function newGame() {
     go('setup');
 }
 
-// ── Helpers ────────────────────────────────────────────
 function go(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + name).classList.add('active');
