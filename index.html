@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flip 7 Score Tracker</title>
+    <style>
+        :root {
+            --bg:         #0d0d1a;
+            --surface:    #141428;
+            --card:       #1c1c35;
+            --border:     #2d2d50;
+            --accent:     #e94560;
+            --gold:       #f5a623;
+            --green:      #4ade80;
+            --blue:       #60a5fa;
+            --purple:     #c4b5fd;
+            --text:       #fffffe;
+            --muted:      #7b7d9d;
+            --danger:     #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* ── Screens ─────────────────────────────────── */
+        .screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100dvh;
+            padding: 20px 16px;
+            padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+        }
+        .screen.active { display: flex; }
+        #screen-winner { padding-bottom: 32px; }
+
+        /* ── Typography ──────────────────────────────── */
+        .app-title {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .app-title h1 {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #e94560 0%, #f5a623 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .app-title p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        /* ── Inputs ──────────────────────────────────── */
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 14px 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]::placeholder { color: var(--muted); }
+        input[type="text"]:focus { border-color: var(--accent); }
+
+        /* ── Buttons ─────────────────────────────────── */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 14px 20px;
+            transition: transform 0.1s, opacity 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn:active { transform: scale(0.94); }
+        .btn:disabled { opacity: 0.35; pointer-events: none; }
+
+        .btn-accent { background: var(--accent); color: white; }
+        .btn-gold   { background: var(--gold);   color: #0d0d1a; }
+        .btn-ghost  { background: var(--card);    color: var(--text); border: 2px solid var(--border); }
+        .btn-full   { width: 100%; padding: 16px; font-size: 1.05rem; }
+
+        /* ── Player chips (setup) ────────────────────── */
+        .player-chips {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .player-chip {
+            display: flex;
+            align-items: center;
+            background: var(--card);
+            border-radius: 14px;
+            padding: 12px 16px;
+            gap: 10px;
+            animation: slideIn 0.2s ease-out;
+        }
+        .chip-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+        .chip-name { flex: 1; font-size: 1rem; font-weight: 500; }
+        .chip-remove {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: color 0.15s, background 0.15s;
+            line-height: 1;
+        }
+        .chip-remove:active { color: var(--danger); background: rgba(239,68,68,0.12); }
+
+        .empty-hint {
+            text-align: center;
+            padding: 28px 0;
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        /* ── Fixed bottom bar ────────────────────────── */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            background: linear-gradient(to top, var(--bg) 65%, transparent);
+        }
+
+        /* ── Round header ────────────────────────────── */
+        .round-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .round-label {
+            font-size: 0.7rem;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .round-number {
+            font-size: 3.2rem;
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, #e94560, #f5a623);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── Player scoring card ─────────────────────── */
+        .psc {
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .psc.is-doubled {
+            border-color: var(--gold);
+            background: linear-gradient(145deg, var(--card), rgba(245,166,35,0.07));
+        }
+
+        .psc-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .psc-name {
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .psc-total {
+            font-size: 0.78rem;
+            color: var(--muted);
+            background: var(--bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .psc-score-display {
+            text-align: center;
+            margin-bottom: 14px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .score-number {
+            font-size: 3.2rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--text);
+            transition: color 0.2s;
+        }
+        .score-number.doubled { color: var(--gold); }
+        .score-formula {
+            font-size: 0.75rem;
+            color: var(--gold);
+            margin-top: 3px;
+            min-height: 15px;
+            opacity: 0.85;
+        }
+
+        /* Score buttons */
+        .score-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .score-btn {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1.05rem;
+            font-weight: 800;
+            padding: 13px 8px;
+            cursor: pointer;
+            transition: transform 0.08s, background 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .score-btn:active { transform: scale(0.88); }
+        .score-btn.s1  { color: var(--purple); border-color: rgba(196,181,253,0.3); }
+        .score-btn.s1:active  { background: rgba(196,181,253,0.1); }
+        .score-btn.s5  { color: var(--blue);   border-color: rgba(96,165,250,0.3); }
+        .score-btn.s5:active  { background: rgba(96,165,250,0.1); }
+        .score-btn.s10 { color: var(--green);  border-color: rgba(74,222,128,0.3); }
+        .score-btn.s10:active { background: rgba(74,222,128,0.1); }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+        }
+        .btn-x2 {
+            background: var(--bg);
+            border: 2px solid rgba(245,166,35,0.35);
+            border-radius: 12px;
+            color: var(--gold);
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: 900;
+            padding: 13px 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-x2.active {
+            background: var(--gold);
+            color: #0d0d1a;
+            border-color: var(--gold);
+            box-shadow: 0 0 18px rgba(245,166,35,0.35);
+        }
+        .btn-x2:active { transform: scale(0.88); }
+
+        .btn-act {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 13px 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-act:active { transform: scale(0.88); background: var(--border); }
+
+        /* ── Leaderboard ─────────────────────────────── */
+        .lb-header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .lb-round-label {
+            font-size: 0.7rem;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .lb-round-num {
+            font-size: 2.8rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .lb-entry {
+            display: flex;
+            align-items: center;
+            background: var(--card);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            gap: 14px;
+            animation: slideIn 0.22s ease-out both;
+        }
+        .lb-entry:nth-child(2) { animation-delay: 0.05s; }
+        .lb-entry:nth-child(3) { animation-delay: 0.10s; }
+        .lb-entry:nth-child(4) { animation-delay: 0.15s; }
+        .lb-entry:nth-child(5) { animation-delay: 0.20s; }
+
+        .lb-entry.top {
+            border-color: var(--gold);
+            background: linear-gradient(145deg, var(--card), rgba(245,166,35,0.08));
+        }
+        .lb-rank {
+            font-size: 1.5rem;
+            min-width: 36px;
+            text-align: center;
+            font-weight: 900;
+        }
+        .lb-rank.num { font-size: 1rem; color: var(--muted); }
+        .lb-info { flex: 1; min-width: 0; }
+        .lb-name {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lb-bar {
+            height: 5px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .lb-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--gold));
+            transition: width 0.6s ease-out;
+        }
+        .lb-scores { text-align: right; }
+        .lb-total { font-size: 1.6rem; font-weight: 900; line-height: 1; }
+        .lb-gain  { font-size: 0.78rem; color: var(--green); margin-top: 1px; }
+
+        /* ── Winner screen ───────────────────────────── */
+        .winner-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 12px 0 28px;
+        }
+        .winner-crown {
+            font-size: 5rem;
+            display: block;
+            animation: bounce 1s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0);    }
+            50%       { transform: translateY(-14px); }
+        }
+        .winner-badge {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .winner-name {
+            font-size: 2.6rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--gold), #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+        .winner-pts { color: var(--muted); font-size: 0.95rem; margin-bottom: 0; }
+
+        .winner-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        /* ── Spacer / Animations ─────────────────────── */
+        .spacer { flex: 1; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0);    }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     SETUP
+═══════════════════════════════════════════════════════ -->
+<div id="screen-setup" class="screen active">
+    <div class="app-title">
+        <h1>Flip 7</h1>
+        <p>Score Tracker</p>
+    </div>
+
+    <div class="section-label">Players</div>
+    <div class="input-row">
+        <input type="text" id="player-input" placeholder="Enter player name…"
+               maxlength="20" autocomplete="off" autocorrect="off"
+               autocapitalize="words" spellcheck="false">
+        <button class="btn btn-accent" onclick="addPlayer()">Add</button>
+    </div>
+
+    <div id="player-chips" class="player-chips"></div>
+    <div id="empty-hint" class="empty-hint">Add at least 2 players to start</div>
+
+    <div class="spacer"></div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-gold btn-full" id="start-btn" onclick="startGame()" disabled>
+            Start Game
+        </button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SCORING
+═══════════════════════════════════════════════════════ -->
+<div id="screen-scoring" class="screen">
+    <div class="round-header">
+        <div class="round-label">Round</div>
+        <div class="round-number" id="round-num">1</div>
+    </div>
+
+    <div id="scoring-cards"></div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-accent btn-full" onclick="endRound()">
+            End Round →
+        </button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LEADERBOARD
+═══════════════════════════════════════════════════════ -->
+<div id="screen-leaderboard" class="screen">
+    <div class="lb-header">
+        <div class="lb-round-label">After Round</div>
+        <div class="lb-round-num" id="lb-round-num">1</div>
+    </div>
+
+    <div id="lb-entries"></div>
+
+    <div class="spacer"></div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-gold btn-full" onclick="nextRound()">
+            Next Round →
+        </button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     WINNER
+═══════════════════════════════════════════════════════ -->
+<div id="screen-winner" class="screen">
+    <div class="winner-top">
+        <span class="winner-crown">🏆</span>
+        <div class="winner-badge">Winner</div>
+        <div id="winner-name" class="winner-name"></div>
+        <div id="winner-pts"  class="winner-pts"></div>
+    </div>
+
+    <div class="section-label">Final Standings</div>
+    <div id="final-standings"></div>
+
+    <div class="winner-actions">
+        <button class="btn btn-gold  btn-full" onclick="playAgain()">Play Again (Same Players)</button>
+        <button class="btn btn-ghost btn-full" onclick="newGame()">New Game</button>
+    </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let players    = [];  // { name, total, _gain }
+let round      = 0;
+let roundIn    = [];  // { raw, doubled }
+
+// ── Setup ──────────────────────────────────────────────
+const nameInput = document.getElementById('player-input');
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayer(); });
+
+function addPlayer() {
+    const name = nameInput.value.trim();
+    if (!name || players.length >= 10) return;
+    vibe(30);
+    players.push({ name, total: 0, _gain: 0 });
+    nameInput.value = '';
+    nameInput.focus();
+    renderSetup();
+}
+
+function removePlayer(i) {
+    players.splice(i, 1);
+    renderSetup();
+}
+
+function renderSetup() {
+    const chips   = document.getElementById('player-chips');
+    const hint    = document.getElementById('empty-hint');
+    const startBtn = document.getElementById('start-btn');
+
+    chips.innerHTML = players.map((p, i) => `
+        <div class="player-chip">
+            <div class="chip-num">${i + 1}</div>
+            <div class="chip-name">${esc(p.name)}</div>
+            <button class="chip-remove" onclick="removePlayer(${i})">✕</button>
+        </div>
+    `).join('');
+
+    hint.style.display    = players.length === 0 ? '' : 'none';
+    startBtn.disabled     = players.length < 2;
+}
+
+function startGame() {
+    if (players.length < 2) return;
+    round = 1;
+    go('scoring');
+    buildCards();
+}
+
+// ── Scoring ────────────────────────────────────────────
+function buildCards() {
+    document.getElementById('round-num').textContent = round;
+    roundIn = players.map(() => ({ raw: 0, doubled: false }));
+
+    document.getElementById('scoring-cards').innerHTML = players.map((p, i) => `
+        <div class="psc" id="psc-${i}">
+            <div class="psc-header">
+                <div class="psc-name">${esc(p.name)}</div>
+                <div class="psc-total">Total: ${p.total}</div>
+            </div>
+            <div class="psc-score-display">
+                <div class="score-number" id="sn-${i}">0</div>
+                <div class="score-formula" id="sf-${i}"></div>
+            </div>
+            <div class="score-grid">
+                <button class="score-btn s1"  onclick="adj(${i},  1)">+1</button>
+                <button class="score-btn s5"  onclick="adj(${i},  5)">+5</button>
+                <button class="score-btn s10" onclick="adj(${i}, 10)">+10</button>
+            </div>
+            <div class="action-grid">
+                <button class="btn-x2"  id="x2-${i}" onclick="toggleX2(${i})">✕2</button>
+                <button class="btn-act"              onclick="adj(${i}, -1)">−1</button>
+                <button class="btn-act"              onclick="clearIn(${i})">Clear</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function adj(i, delta) {
+    vibe(15);
+    roundIn[i].raw = Math.max(0, roundIn[i].raw + delta);
+    refreshDisp(i);
+}
+
+function toggleX2(i) {
+    vibe(40);
+    const inp = roundIn[i];
+    inp.doubled = !inp.doubled;
+    document.getElementById(`psc-${i}`).classList.toggle('is-doubled', inp.doubled);
+    document.getElementById(`x2-${i}`).classList.toggle('active', inp.doubled);
+    document.getElementById(`sn-${i}`).classList.toggle('doubled', inp.doubled);
+    refreshDisp(i);
+}
+
+function clearIn(i) {
+    roundIn[i].raw    = 0;
+    roundIn[i].doubled = false;
+    document.getElementById(`psc-${i}`).classList.remove('is-doubled');
+    document.getElementById(`x2-${i}`).classList.remove('active');
+    document.getElementById(`sn-${i}`).classList.remove('doubled');
+    refreshDisp(i);
+}
+
+function refreshDisp(i) {
+    const { raw, doubled } = roundIn[i];
+    const shown = doubled ? raw * 2 : raw;
+    document.getElementById(`sn-${i}`).textContent = shown;
+    document.getElementById(`sf-${i}`).textContent =
+        (doubled && raw > 0) ? `${raw} × 2` : (doubled ? '× 2 ready' : '');
+}
+
+function endRound() {
+    players.forEach((p, i) => {
+        const { raw, doubled } = roundIn[i];
+        p._gain  = doubled ? raw * 2 : raw;
+        p.total += p._gain;
+    });
+
+    const sorted = [...players].sort((a, b) => b.total - a.total);
+    if (sorted[0].total >= 200) {
+        showWinner(sorted);
+    } else {
+        showLB(sorted);
+    }
+}
+
+// ── Leaderboard ────────────────────────────────────────
+function showLB(sorted) {
+    document.getElementById('lb-round-num').textContent = round;
+    const medals = ['🥇', '🥈', '🥉'];
+    document.getElementById('lb-entries').innerHTML = sorted.map((p, i) => `
+        <div class="lb-entry ${i === 0 ? 'top' : ''}">
+            <div class="lb-rank ${i > 2 ? 'num' : ''}">${medals[i] ?? i + 1}</div>
+            <div class="lb-info">
+                <div class="lb-name">${esc(p.name)}</div>
+                <div class="lb-bar">
+                    <div class="lb-fill" style="width:${pct(p.total, 200)}%"></div>
+                </div>
+            </div>
+            <div class="lb-scores">
+                <div class="lb-total">${p.total}</div>
+                <div class="lb-gain">${p._gain > 0 ? '+' + p._gain : ''}</div>
+            </div>
+        </div>
+    `).join('');
+    go('leaderboard');
+}
+
+function nextRound() {
+    round++;
+    go('scoring');
+    buildCards();
+}
+
+// ── Winner ─────────────────────────────────────────────
+function showWinner(sorted) {
+    const w = sorted[0];
+    document.getElementById('winner-name').textContent = w.name;
+    document.getElementById('winner-pts').textContent  = `${w.total} points`;
+
+    const medals = ['🥇', '🥈', '🥉'];
+    document.getElementById('final-standings').innerHTML = sorted.map((p, i) => `
+        <div class="lb-entry ${i === 0 ? 'top' : ''}">
+            <div class="lb-rank ${i > 2 ? 'num' : ''}">${medals[i] ?? i + 1}</div>
+            <div class="lb-info">
+                <div class="lb-name">${esc(p.name)}</div>
+                <div class="lb-bar">
+                    <div class="lb-fill" style="width:${pct(p.total, 200)}%"></div>
+                </div>
+            </div>
+            <div class="lb-scores">
+                <div class="lb-total">${p.total}</div>
+            </div>
+        </div>
+    `).join('');
+
+    go('winner');
+    vibe([100, 50, 100, 50, 250]);
+}
+
+function playAgain() {
+    players.forEach(p => { p.total = 0; p._gain = 0; });
+    round = 1;
+    go('scoring');
+    buildCards();
+}
+
+function newGame() {
+    players = [];
+    round   = 0;
+    renderSetup();
+    go('setup');
+}
+
+// ── Helpers ────────────────────────────────────────────
+function go(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function pct(val, max) {
+    return Math.min(100, Math.max(0, (val / max) * 100)).toFixed(1);
+}
+
+function vibe(pattern) {
+    try { navigator.vibrate && navigator.vibrate(pattern); } catch(_) {}
+}
+
+function esc(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
