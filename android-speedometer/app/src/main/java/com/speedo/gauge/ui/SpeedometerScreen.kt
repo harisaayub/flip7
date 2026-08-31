@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +31,6 @@ import com.speedo.gauge.SpeedUnit
 import com.speedo.gauge.ui.theme.Accent
 import com.speedo.gauge.ui.theme.AccentDanger
 import com.speedo.gauge.ui.theme.AccentWarn
-import com.speedo.gauge.ui.theme.Background
 import com.speedo.gauge.ui.theme.Surface
 import com.speedo.gauge.ui.theme.TextPrimary
 import com.speedo.gauge.ui.theme.TextSecondary
@@ -48,6 +46,7 @@ fun SpeedometerScreen(
     maxSpeedInUnit: Float,
     onToggleUnit: () -> Unit,
     onResetMax: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val displaySpeed = unit.convert(speedMps)
     val animatedSpeed by animateFloatAsState(
@@ -56,42 +55,34 @@ fun SpeedometerScreen(
         label = "speed",
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .systemBarsPadding()
-            .padding(20.dp),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TopStatusRow(
-                hasFix = hasFix,
-                accuracyMeters = accuracyMeters,
-                unit = unit,
-                onToggleUnit = onToggleUnit,
+    Column(modifier = modifier.fillMaxSize()) {
+        TopStatusRow(
+            hasFix = hasFix,
+            accuracyMeters = accuracyMeters,
+            unit = unit,
+            onToggleUnit = onToggleUnit,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            SpeedGauge(
+                value = animatedSpeed,
+                maxScale = unit.maxScale,
+                progressColor = gaugeColorFor(animatedSpeed, unit.maxScale),
+                trackColor = TrackColor,
+                tickColor = TextSecondary,
+                modifier = Modifier.fillMaxSize(),
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                SpeedGauge(
-                    value = animatedSpeed,
-                    maxScale = unit.maxScale,
-                    progressColor = gaugeColorFor(animatedSpeed, unit.maxScale),
-                    trackColor = TrackColor,
-                    tickColor = TextSecondary,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                SpeedReadout(speedValue = animatedSpeed, unitLabel = unit.label, hasFix = hasFix)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            MaxSpeedRow(maxSpeed = maxSpeedInUnit, unitLabel = unit.label, onResetMax = onResetMax)
+            SpeedReadout(speedValue = animatedSpeed, unitLabel = unit.label, hasFix = hasFix)
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        MaxSpeedRow(maxSpeed = maxSpeedInUnit, unitLabel = unit.label, onResetMax = onResetMax)
     }
 }
 

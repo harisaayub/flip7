@@ -14,6 +14,14 @@ just your current speed, read straight from GPS.
 - Keeps the screen on while the app is in the foreground
 - No Google Play Services dependency — works on any Android 8.0+ (API 26) device
   with a GPS chip
+- **History tab**: line charts of distance, speed, and acceleration over the
+  current session, with a reset button
+- **Debug tab**: raw GPS diagnostics — permission state, active provider,
+  whether the provider reports speed directly, accuracy/speed-accuracy,
+  bearing, altitude, raw lat/lon, fix count, and time since the last fix. If
+  the app "isn't working," this tab is the first place to look — it'll show
+  things like no provider enabled, permission not actually granted, or a fix
+  count stuck at zero
 
 ## Building
 
@@ -60,7 +68,13 @@ To install on your phone with nothing but a browser:
 - `UnitsStore` persists the selected unit via Jetpack DataStore.
 - `MainActivity` wires permission handling (runtime `ACCESS_FINE_LOCATION` /
   `ACCESS_COARSE_LOCATION`) and lifecycle-based start/stop of location
-  updates to the Compose UI in `SpeedometerScreen` / `SpeedGauge`.
+  updates to the Compose UI in `SpeedometerScreen` / `SpeedGauge`, and hosts
+  a top-level tab row (`AppTabRow`) switching between the Speed, History,
+  and Debug screens.
+- `SpeedTracker` also accumulates total distance and a bounded
+  `StateFlow<List<TelemetrySample>>` history (speed, distance, and
+  per-sample acceleration), which `HistoryScreen` renders with a small
+  custom `LineChart` composable.
 
 ## Notes
 

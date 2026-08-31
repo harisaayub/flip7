@@ -30,8 +30,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.speedo.gauge.ui.AppTab
+import com.speedo.gauge.ui.AppTabRow
+import com.speedo.gauge.ui.DebugPanel
+import com.speedo.gauge.ui.HistoryScreen
 import com.speedo.gauge.ui.SpeedometerScreen
 import com.speedo.gauge.ui.theme.Accent
 import com.speedo.gauge.ui.theme.Background
@@ -81,12 +86,15 @@ private fun AppRoot(speedTracker: SpeedTracker, unitsStore: UnitsStore) {
     }
 
     val speedState by speedTracker.state.collectAsStateWithLifecycle()
+    val history by speedTracker.history.collectAsStateWithLifecycle()
     val unit by unitsStore.unitFlow.collectAsStateWithLifecycle(initialValue = SpeedUnit.MPH)
 
     var maxSpeedMps by remember { mutableFloatStateOf(0f) }
     if (speedState.speedMps > maxSpeedMps) {
         maxSpeedMps = speedState.speedMps
     }
+
+    var selectedTab by remember { mutableStateOf(AppTab.SPEED) }
 
     DisposableEffect(lifecycleOwner, permissionGranted) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -102,19 +110,45 @@ private fun AppRoot(speedTracker: SpeedTracker, unitsStore: UnitsStore) {
     }
 
     if (permissionGranted) {
-        SpeedometerScreen(
-            speedMps = speedState.speedMps,
-            hasFix = speedState.hasFix,
-            accuracyMeters = speedState.accuracyMeters,
-            unit = unit,
-            maxSpeedInUnit = unit.convert(maxSpeedMps),
-            onToggleUnit = {
-                scope.launch {
-                    unitsStore.setUnit(if (unit == SpeedUnit.MPH) SpeedUnit.KMH else SpeedUnit.MPH)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Background)
+                .systemBarsPadding()
+                .padding(20.dp),
+        ) {
+            AppTabRow(selected = selectedTab, onSelect = { selectedTab = it })
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(12.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                when (selectedTab) {
+                    AppTab.SPEED -> SpeedometerScreen(
+                        speedMps = speedState.speedMps,
+                        hasFix = speedState.hasFix,
+                        accuracyMeters = speedState.accuracyMeters,
+                        unit = unit,
+                        maxSpeedInUnit = unit.convert(maxSpeedMps),
+                        onToggleUnit = {
+                            scope.launch {
+                                unitsStore.setUnit(if (unit == SpeedUnit.MPH) SpeedUnit.KMH else SpeedUnit.MPH)
+                            }
+                        },
+                        onResetMax = { maxSpeedMps = 0f },
+                    )
+                    AppTab.HISTORY -> HistoryScreen(
+                        samples = history,
+                        unit = unit,
+                        onResetSession = {
+                            speedTracker.resetSession()
+                            maxSpeedMps = 0f
+                        },
+                    )
+                    AppTab.DEBUG -> DebugPanel(
+                        state = speedState,
+                        locationPermissionGranted = permissionGranted,
+                    )
                 }
-            },
-            onResetMax = { maxSpeedMps = 0f },
-        )
+            }
+        }
     } else {
         LocationPermissionScreen(
             onRequestPermission = {
