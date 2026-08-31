@@ -31,6 +31,26 @@ Install to a connected device/emulator:
 ./gradlew installDebug
 ```
 
+## Getting a build without a computer
+
+Every push to a `claude/**` branch (or `main`) triggers
+`.github/workflows/android-debug-build.yml`, which builds a debug APK on
+GitHub's runners and publishes it as a GitHub Release asset tagged
+`dev-build-<branch-name>` — that release is overwritten on each push, so
+there's always one current build per branch.
+
+To install on your phone with nothing but a browser:
+
+1. Open the repo's **Releases** page (or the *Actions* tab → latest run →
+   `dev-build-...`) in a mobile browser and download the `app-debug.apk`
+   asset.
+2. Open the downloaded file. Android will prompt to allow installs from
+   whichever app you downloaded it with (Chrome, Files, etc.) the first
+   time — allow it, then install.
+3. It's a debug-signed build, so no Play Store account or code signing is
+   needed; just re-download and reinstall after each new push to pick up
+   changes.
+
 ## How it works
 
 - `SpeedTracker` requests location updates from the GPS provider (falling
